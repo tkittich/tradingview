@@ -1,32 +1,15 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
-// Stochastic & RSI. Same as the built-in scripts with changing color when overbought or oversold.
+// RSI & Stochastic. Same as the built-in scripts with changing color when overbought or oversold.
 
 //@version=5
 
-indicator(title="Stochastic & RSI", shorttitle="Sto & RSI", format=format.price, precision=2, timeframe="", timeframe_gaps=true)
-
-///////////////
-// Stochastic
-showSto = input(true, title="Show Stochastic")
-
-periodK = input.int(14, title="%K Length", minval=1, group="Stochastic Settings")
-smoothK = input.int(1, title="%K Smoothing", minval=1, group="Stochastic Settings")
-periodD = input.int(3, title="%D Smoothing", minval=1, group="Stochastic Settings")
-
-k = ta.sma(ta.stoch(close, high, low, periodK), smoothK)
-d = ta.sma(k, periodD)
-
-stoColor = k > 80 or k < 20 ? color.red : #2962FF
-
-plot(showSto ? k : na, title="%K", color=stoColor)
-plot(showSto ? d : na, title="%D", color=#FF6D00)
-h0 = hline(showSto ? 80 : na, "Stochastic Upper Band", color=#787B86)
-h1 = hline(showSto ? 20 : na, "Stochastic Lower Band", color=#787B86)
-fill(h0, h1, color=color.rgb(33, 150, 243, 90), title="Stochastic Background")
+indicator(title="RSI & Stochastic", shorttitle="RSI & Sto", format=format.price, precision=2, timeframe="", timeframe_gaps=true)
 
 ///////////////
 // RSI
-showRSI = input(true, title="Show RSI")
+gRSI   = "RSI Settings"
+gRSIMA = "RSI MA Settings"
+showRSI = input(true, title="Show RSI", group=gRSI)
 
 ma(source, length, type) =>
     switch type
@@ -37,11 +20,12 @@ ma(source, length, type) =>
         "WMA" => ta.wma(source, length)
         "VWMA" => ta.vwma(source, length)
 
-rsiLengthInput = input.int(14, minval=1, title="RSI Length", group="RSI Settings")
-rsiSourceInput = input.source(close, "Source", group="RSI Settings")
-maTypeInput = input.string("SMA", title="MA Type", options=["SMA", "Bollinger Bands", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="MA Settings")
-maLengthInput = input.int(14, title="MA Length", group="MA Settings")
-bbMultInput = input.float(2.0, minval=0.001, maxval=50, title="BB StdDev", group="MA Settings")
+rsiLengthInput = input.int(14, minval=1, title="RSI Length", group=gRSI)
+rsiSourceInput = input.source(close, "Source", group=gRSI)
+
+maTypeInput = input.string("SMA", title="MA Type", options=["SMA", "Bollinger Bands", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group=gRSIMA)
+maLengthInput = input.int(14, title="MA Length", group=gRSIMA)
+bbMultInput = input.float(2.0, minval=0.001, maxval=50, title="BB StdDev", group=gRSIMA)
 
 up = ta.rma(math.max(ta.change(rsiSourceInput), 0), rsiLengthInput)
 down = ta.rma(-math.min(ta.change(rsiSourceInput), 0), rsiLengthInput)
@@ -49,14 +33,37 @@ rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
 rsiMA = ma(rsi, maLengthInput, maTypeInput)
 isBB = maTypeInput == "Bollinger Bands" and showRSI
 
-rsiColor = rsi > 70 or rsi < 30 ? color.red : #7E57C2
+rsiColor = rsi > 70 or rsi < 30 ? color.yellow : color.purple
 
-plot(showRSI ? rsi : na, "RSI", color=rsiColor)
-plot(showRSI ? rsiMA : na, "RSI-based MA", color=color.yellow)
+plot(showRSI ? rsi : na, "RSI", color=rsiColor, linewidth=2)
+plot(showRSI ? rsiMA : na, "RSI-based MA", color=color.gray)
+
 rsiUpperBand = hline(showRSI ? 70 : na, "RSI Upper Band", color=#787B86)
 hline(50, "RSI Middle Band", color=color.new(#787B86, 50))
 rsiLowerBand = hline(showRSI ? 30 : na, "RSI Lower Band", color=#787B86)
-fill(rsiUpperBand, rsiLowerBand, color=color.rgb(126, 87, 194, 90), title="RSI Background")
+fill(rsiUpperBand, rsiLowerBand, color=color.rgb(126, 87, 194, 95), title="RSI Background")
+
 bbUpperBand = plot(isBB ? rsiMA + ta.stdev(rsi, maLengthInput) * bbMultInput : na, title = "Upper Bollinger Band", color=color.green)
 bbLowerBand = plot(isBB ? rsiMA - ta.stdev(rsi, maLengthInput) * bbMultInput : na, title = "Lower Bollinger Band", color=color.green)
-fill(bbUpperBand, bbLowerBand, color= isBB ? color.new(color.green, 90) : na, title="Bollinger Bands Background")
+fill(bbUpperBand, bbLowerBand, color= isBB ? color.new(color.green, 95) : na, title="Bollinger Bands Background")
+
+///////////////
+// Stochastic
+gSto  = "Stochastic Settings"
+showSto = input(true, title="Show Stochastic", group=gSto)
+
+periodK = input.int(14, title="%K Length", minval=1, group=gSto)
+smoothK = input.int(1, title="%K Smoothing", minval=1, group=gSto)
+periodD = input.int(3, title="%D Smoothing", minval=1, group=gSto)
+
+k = ta.sma(ta.stoch(close, high, low, periodK), smoothK)
+d = ta.sma(k, periodD)
+
+stoColor = k > 80 or k < 20 ? color.orange : color.blue
+
+plot(showSto ? k : na, title="%K", color=stoColor)
+plot(showSto ? d : na, title="%D", color=color.gray)
+h0 = hline(showSto ? 80 : na, "Stochastic Upper Band", color=#787B86)
+h1 = hline(showSto ? 20 : na, "Stochastic Lower Band", color=#787B86)
+fill(h0, h1, color=color.rgb(33, 150, 243, 95), title="Stochastic Background")
+
